@@ -31,17 +31,30 @@ list(
   tar_target(data, subset(dataaaa)),
   tar_target(prep, preprocessing(data, FALSE)),
   tar_target(ids, get_IDs(prep, TRUE, TRUE,TRUE,TRUE,TRUE,TRUE, TRUE)),
-  tar_target(save_ann, save_ids(ids)),
+  
   tar_target(classes, get_classes(ids)),
   tar_target(foods, annotate_food(prep)),
   tar_target(fobi_mets, fobi_met()),
-  tar_target(class_out, out_fobi(classes,fobi_mets)),
-  tar_target(class_data, class_df(classes, class_out)),
-  # tar_target(sum, summary(prep,foods,ids)),
-  tar_target(save_dat, save_data(prep)),
-  tar_target(save_class, save__new_classes(class_data))
   
-  )
+  tar_target(class_out, out_fobi(classes,fobi_mets)),
+  tar_target(class_data, class_df(classes, class_out)), #works until here
+  
+  tar_target(ass, associations(ids, foods)),
+  tar_target(ass_ann, ass_anno(ass, fobi_mets)),
+  
+  tar_target(fobi_rel, relations_fobi(ass_ann)),
+  tar_target(new_rel, relations_fobi_new(ass_ann)),
+  
+  
+  tar_target(save_dat, save_data(prep)),
+  tar_target(save_ann, save_ids(ids)),
+  tar_target(save_rel, save_fobi_rel(fobi_rel)),
+  tar_target(save_rel_new, save_new_rel(new_rel)),
+  tar_target(save_class, save__new_classes(class_data)),
+  
+  tar_target(sum, summary(prep,foods,ids, fobi_rel, new_rel, class_data))
+  
+)
 
 
 #MAYBE I CAN CREATE A SCRIPT CALLED OPTIONS FOR STUFF SUCH AS THE SEPARATOR OR OTHER INPUTS?

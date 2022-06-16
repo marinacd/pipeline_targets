@@ -3,7 +3,7 @@ get_data <- function(file) {
 }
 
 subset <- function(data){
-  data[1:10,]
+  data
 }
 
 #preprocessing subfunctions
@@ -15,8 +15,8 @@ split_data <- function(data,sep) {
 }
 
 add_IDcol <- function(data) {
-    data %>%
-      mutate(ID = 1:length(data$Biomarker))
+  data %>%
+    mutate(ID = 1:length(data$Biomarker))
 }
 
 
@@ -31,7 +31,7 @@ preprocessing <- function(data, split) {
     dplyr::rename(food = Intake) %>%
     dplyr::rename(biomarker = Biomarker) %>%
     mutate(biomarker = tolower(biomarker)) #%>%
-    # unique(by = c(biomarker, food)) #no repeated relationships plssssssss
+  # unique(by = c(biomarker, food)) #no repeated relationships plssssssss
 }
 
 #ids subfunctions
@@ -87,17 +87,17 @@ get_IDs <- function(data, InChIKey, HDMB, ChemSpider, ChEBI, InChI, KEGG, PubChe
     data <- data %>%
       mutate(`PubChem CID` = unlist(get_pubchem(data)))
   }
-
+  
 }
 
 save_ids <- function(data){
-  openxlsx::write.xlsx(data, "annotations.xlsx")
+  openxlsx::write.xlsx(data, "annotations.xlsx", overwrite = TRUE)
 }
 
 
 fobi_met <- function(){
-  fobitools::parse_fobi(terms = "FOBI:01501", get = "des") %>%    #"FOBI:01501" is the root of metabolites
-    mutate(biomarker = tolower(name))   
+  fobitools::parse_fobi(terms = "FOBI:01501", get = "des")   #"FOBI:01501" is the root of metabolites
+  
 }
 
 #classification subfunctions
@@ -141,7 +141,7 @@ out_fobi <- function(data, met_fobi){
 
 class_df <- function(data, out_fobi){
   ls_class <- list() #create a list
-
+  
   for (i in 1:nrow(data)) {                                    #for every row in the classification dataframe
     if(data$Classification[i] %in% out_fobi){                  #if the classification assigned is not in fobi
       ls_class[[i]] <- data.frame(parent = data$Classification[i-1], child = data$Classification[i])
@@ -159,15 +159,67 @@ annotate_food <- function(data){
   data %>%
     select(ID, food) %>%
     fobitools::annotate_foods(similarity = 0.85, reference = fobitools::foods)
-
+  
 }
 
 
 
-associations_fobi_anno <- associations_fobi %>%
-  left_join(metabolites_fobi_2, by = "biomarker") %>%
+associations <- function(data,foods){
+  foods_ann <- foods$annotated %>%
+    dplyr::rename(food = FOOD_NAME)
+  
+  ids <- data %>%
+    select(biomarker,InChIKey)
+  
+  data <- data %>%
+    right_join(foods_ann, by = "food") %>%
+    select(FOBI_ID, FOBI_NAME, food, biomarker)
+  
+  data <- data %>%
+    left_join(ids, by = "biomarker") %>%
+    mutate(biomarker = tolower(biomarker))
+  
+  return(data)
+}
+
+ass_anno <- function(ass,mets){
+  mets <- mets %>%
+    select(1:4) %>%
+    mutate(biomarker = tolower(name))   
+  
+  ass <- ass %>%
+    left_join(mets, by = "biomarker") %>%
+    filter(!duplicated(.)) %>%
+    dplyr::rename(original_name = name)
+}
+
+
+#### relations to include (metabolites already present in FOBI)
+
+relations_fobi <- function(ass_ann){
+  ass_ann %>%
+    filter(!is.na(original_name)) %>%
+    filter(!duplicated(.))
+}
+
+
+save_fobi_rel <- function(fobi_rel){
+  openxlsx::write.xlsx(fobi_rel, "relations_fobi.xlsx", overwrite = TRUE)
+}
+
+
+#### relations to include (new FOBI metabolites)
+
+relations_fobi_new <- function(ass_ann)
+  ass_ann %>%
+  filter(is.na(original_name)) %>%                  #retain rows that AREN'T in fobi
+  filter(!is.na(InChIKey)) %>%                      #retain rows that have and inchikey
   filter(!duplicated(.)) %>%
-  dplyr::rename(original_name = name.y)
+  mutate(biomarker = gsub(":", "-", biomarker))
+
+save_new_rel <- function(new_rel){
+  openxlsx::write.xlsx(new_rel, "relations_fobi_new.xlsx", overwrite = TRUE)
+}
 
 
 
@@ -176,41 +228,38 @@ associations_fobi_anno <- associations_fobi %>%
 
 
 
+summary <- function(data, foods, ann, fobi_rel, new_rel, class_data){
+  
+  info <- list()
+  
+  info$Input_Data <- paste0("Found ", nrow(data) , " relationships in input data, associating ", 
+                            length(unique(data$biomarker)), " biomarkers with ", length(unique(data$food)), " food items.")
+  
+  info$Food_Annotation <-  paste0( "Able to annotate: ", nrow(foods$annotated), " foods. ", 
+                                   "Unable to annotate: ", nrow(foods$unannotated), " foods.")
+  
+  info$Missing_classification <- paste0("Can't retrieve ", sum(is.na(ann$InChIKey)), " InChIKeys, unable to classify those metabolites.")
+  
+  a <- sum(!is.na(ann$InChIKey), na.rm = TRUE)
+  b <- sum(!is.na(ann$HDMB), na.rm = TRUE)
+  c <- sum(!is.na(ann$ChemSpider), na.rm = TRUE)
+  d <- sum(!is.na(ann$ChEBI), na.rm = TRUE)
+  e <- sum(!is.na(ann$InChI), na.rm = TRUE)
+  f <- sum(!is.na(ann$KEGG), na.rm = TRUE)
+  g <- sum(!is.na(ann$`PubChem CID`), na.rm = TRUE)
+  
+  info$Total_IDS <- tibble( "InChIKey" = a, "HDMB" = b, "ChemSpider" = c, "ChEBI" = d, InChI = e, "KEGG" = f , "PubChem CID" = g)
+  
+  info$Relationships_Found <- paste0("Found ",  nrow(fobi_rel), " new relationships from metabolites already present in fobi." )
+  info$New_Relationships_Found <- paste0("Found " , nrow(new_rel), " new relationships from metabolites already present in fobi.")
+  
+  info$classes <- paste0("Found ", nrow(class_data), " new classes.")
+  
+  print(info)
+  
+  
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-# 
-# 
-# summary <- function(data, foods,ids){
-# 
-#   n1 <- length(unique(data()$biomarker))
-#   n2 <- length(unique(data$food))
-#   n3 <- nrow(data)
-#   rel <- paste0("Found ", n3 , " relationships in input data, associating ", n1, " biomarkers with ", n2, " food items.")
-# 
-#   info <- list()
-#   info$relationships <- rel
-#   info$foods <-  paste0( "Found ", nrow(foods$annotated), " foods that could be annotated and ", nrow(foods$unannotated), " that couldn't.")
-#   
-#   info$InChIKey <- paste0("Can't retrieve ", sum(is.na(ids$InChIKey)), " InChIKeys, unable to classify those metabolites.")
-#   
-#   
-#   print(info)
-#   
-#   
-#   
-# }
-# 
 
 save_data <- function(data) {
   openxlsx::write.xlsx(data, "composition_data_processed.xlsx")
