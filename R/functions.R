@@ -6,6 +6,9 @@ subset <- function(data){
   data
 }
 
+# input_exp <-"~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx"
+# input_phyto <-"~/Desktop/TFG/ProtegéPipeline/PhytoHub/phytohub_associations.xlsx"
+
 #preprocessing subfunctions
 split_data <- function(data,sep) {
   data %>%
@@ -27,6 +30,7 @@ preprocessing <- function(data, split) {
   }
   if (!('ID' %in% colnames(data))){
     add_IDcol(data)}
+  
   data %>% select(ID,Biomarker,Intake)%>%
     dplyr::rename(food = Intake) %>%
     dplyr::rename(biomarker = Biomarker) %>%
@@ -91,7 +95,7 @@ get_IDs <- function(data, InChIKey, HDMB, ChemSpider, ChEBI, InChI, KEGG, PubChe
 }
 
 save_ids <- function(data){
-  openxlsx::write.xlsx(data, "annotations.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(data, "annotationsExposome.xlsx", overwrite = TRUE)
 }
 
 
@@ -109,12 +113,12 @@ classifiable <- function(data){
     filter(!duplicated(.))
 }
 
-not_classifiable <- function(data){
-  data  %>%
-    select(biomarker , `InChIKey`) %>%
-    filter(is.na(InChIKey)) %>%
-    filter(!duplicated(.))
-}
+# not_classifiable <- function(data){
+#   data  %>%
+#     select(biomarker , `InChIKey`) %>%
+#     filter(is.na(InChIKey)) %>%
+#     filter(!duplicated(.))
+# }
 
 classify <- function(data){
   df <- purrr::map(data$InChIKey, get_classification)
@@ -204,26 +208,43 @@ relations_fobi <- function(ass_ann){
 
 
 save_fobi_rel <- function(fobi_rel){
-  openxlsx::write.xlsx(fobi_rel, "relations_fobi.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(fobi_rel, "relations_fobiExposome.xlsx", overwrite = TRUE)
 }
 
 
 #### relations to include (new FOBI metabolites)
 
-relations_fobi_new <- function(ass_ann)
+relations_fobi_new <- function(ass_ann){
   ass_ann %>%
   filter(is.na(original_name)) %>%                  #retain rows that AREN'T in fobi
   filter(!is.na(InChIKey)) %>%                      #retain rows that have and inchikey
   filter(!duplicated(.)) %>%
   mutate(biomarker = gsub(":", "-", biomarker))
+}
 
 save_new_rel <- function(new_rel){
-  openxlsx::write.xlsx(new_rel, "relations_fobi_new.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(new_rel, "relations_fobi_newExposome.xlsx", overwrite = TRUE)
 }
 
 
 
+new_classes <- function(classes){
+  classes %>%
+    dplyr::rename(InChIKey = name) %>%
+    group_by(InChIKey) %>%             #next operations will be done by Inchikey group
+    dplyr::slice(n()) %>%              #index rows by location, location = size of group
+    #aka will get the last row for each inchikey so the last classification
+    filter(!duplicated(InChIKey))
+} 
 
+####Classification of new metabolites
+
+class_new_met <- function(relations_fobi_new, df_class2){
+  relations_fobi_new %>%
+    left_join(df_class2, by = "InChIKey") %>%
+    select(biomarker, Classification)   %>%
+    mutate(biomarker = gsub(":", "-", biomarker))
+}
 
 
 
@@ -260,12 +281,40 @@ summary <- function(data, foods, ann, fobi_rel, new_rel, class_data){
   
 }
 
+add_fobi <- function(data){
+  seq <- seq(from = 50340, to = 50340 + sum(is.na(data$FOBI_ID)) -1 )
+  ids <- paste0("FOBI:0", seq)
+  data$FOBI_ID[is.na(data$FOBI_ID)] <- ids
+  return(data)
+}
+
+new_merge <- function(rel,ann,class){
+  rel <- rel %>% select(1:5)
+  ann <- ann %>% select(-ID) %>% filter(!duplicated(biomarker))
+  b <- left_join(ann,rel)
+  c <- left_join(b, class ) %>% distinct(.keep_all = TRUE)
+  add_fobi(c)
+  return(c)
+}
+
+
+
+save <- function(data) {
+  openxlsx::write.xlsx(data, "new_mets_and_relsExposome.xlsx")
+}
+
+
+
+
 
 save_data <- function(data) {
-  openxlsx::write.xlsx(data, "composition_data_processed.xlsx")
+  openxlsx::write.xlsx(data, "composition_data_processedExposome.xlsx")
 }
 save__new_classes <- function(data){
-  openxlsx::write.xlsx(data, "fobi_new_classes.xlsx")
+  openxlsx::write.xlsx(data, "fobi_new_classesExposome.xlsx")
+}
+save_new_classes <- function(data){
+  openxlsx::write.xlsx(data, "fobi_new_met_classesExposome.xlsx")
 }
 
 

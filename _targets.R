@@ -26,7 +26,7 @@ lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
 
 # Replace the target list below with your own:
 list(
-  tar_target(file, "~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx", format = "file"),
+tar_target(file, "~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx", format = "file"),
   tar_target(dataaaa, get_data(file)),
   tar_target(data, subset(dataaaa)),
   tar_target(prep, preprocessing(data, FALSE)),
@@ -45,13 +45,20 @@ list(
   tar_target(fobi_rel, relations_fobi(ass_ann)),
   tar_target(new_rel, relations_fobi_new(ass_ann)),
   
-  
+  tar_target(df_class, new_classes(classes)),
+  tar_target(new_met_class, class_new_met(new_rel, df_class)),
+
+  tar_target(new, new_merge(new_rel, ids, new_met_class)),
+  tar_target(fobiID, add_fobi(new)),
+
   tar_target(save_dat, save_data(prep)),
   tar_target(save_ann, save_ids(ids)),
   tar_target(save_rel, save_fobi_rel(fobi_rel)),
   tar_target(save_rel_new, save_new_rel(new_rel)),
   tar_target(save_class, save__new_classes(class_data)),
-  
+  tar_target(save_new_class,save_new_classes(new_met_class)),
+  tar_target(save_new, save(new)),
+
   tar_target(sum, summary(prep,foods,ids, fobi_rel, new_rel, class_data))
   
 )
