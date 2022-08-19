@@ -25,11 +25,14 @@ add_IDcol <- function(data) {
 
 ##PREPROCESSING##
 preprocessing <- function(data, split) {
+  
   if(split){
-    split_data(data,"/")
+    data <- split_data(data,"/")
   }
+  
   if (!('ID' %in% colnames(data))){
-    add_IDcol(data)}
+    data <- add_IDcol(data)}
+  
   
   data %>% select(ID,Biomarker,Intake)%>%
     dplyr::rename(food = Intake) %>%
