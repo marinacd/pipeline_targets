@@ -3,7 +3,7 @@ get_data <- function(file) {
 }
 
 subset <- function(data){
-  data
+  data[1:10,]
 }
 
 # input_exp <-"~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx"
@@ -65,7 +65,7 @@ get_pubchem <- function(data){
 }
 
 ##IDs##
-get_IDs <- function(data, InChIKey, HDMB, ChemSpider, ChEBI, InChI, KEGG, PubChem){
+get_IDs <- function(data, InChIKey = TRUE, HDMB, ChemSpider, ChEBI, InChI, KEGG, PubChem){
   if(InChIKey){
     data <- data %>%
       mutate(InChIKey = unlist(get_inchis(data)))    #maybe i could add this to preprocessing since it is needed for classification

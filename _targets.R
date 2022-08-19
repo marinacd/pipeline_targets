@@ -9,7 +9,7 @@ library(targets)
 
 # Set target options:
 tar_option_set(
-  packages = c("tibble", "tidyverse", "readxl", "classyfireR", "fobitools", "webchem"), # packages that your targets need to run
+  packages = c("tibble", "tidyverse", "readxl", "dplyr", "classyfireR", "fobitools", "webchem"), # packages that your targets need to run
   format = "rds" # default storage format
   # Set other options as needed.
 )
@@ -26,9 +26,9 @@ lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
 
 # Replace the target list below with your own:
 list(
-tar_target(file, "~/Desktop/TFG/ProtegéPipeline/PhytoHub/phytohub_associations.xlsx", format = "file"),
-  tar_target(dataaaa, get_data(file)),
-  tar_target(data, subset(dataaaa)),
+tar_target(file, "~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx", format = "file"),
+  tar_target(dataa, get_data(file)),
+  tar_target(data, subset(dataa)),
   tar_target(prep, preprocessing(data, TRUE)),
   tar_target(ids, get_IDs(prep, TRUE, TRUE,TRUE,TRUE,TRUE,TRUE, TRUE)),
   
