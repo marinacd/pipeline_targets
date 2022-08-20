@@ -3,7 +3,7 @@ get_data <- function(file) {
 }
 
 subset <- function(data){
-  data[1:10,]
+  data[503:703,]
 }
 
 # input_exp <-"~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx"
@@ -30,14 +30,16 @@ preprocessing <- function(data, split) {
     data <- split_data(data,"/")
   }
   
-  if (!('ID' %in% colnames(data))){
-    data <- add_IDcol(data)}
+  # if (!('ID' %in% colnames(data))){
+    data <- add_IDcol(data)
   
-  
-  data %>% select(ID,Biomarker,Intake)%>%
+  ids <- c("InChIKey", "ChEBI", "ChemSpider", "InChI", "KEGG", "PubChem", "HDMB" )
+
+  data %>% 
     dplyr::rename(food = Intake) %>%
     dplyr::rename(biomarker = Biomarker) %>%
-    mutate(biomarker = tolower(biomarker)) #%>%
+    mutate(biomarker = tolower(biomarker)) %>%
+    select(ID, biomarker, food, which(colnames(data) %in% ids))
   # unique(by = c(biomarker, food)) #no repeated relationships plssssssss
 }
 
@@ -65,7 +67,7 @@ get_pubchem <- function(data){
 }
 
 ##IDs##
-get_IDs <- function(data, InChIKey = TRUE, HDMB, ChemSpider, ChEBI, InChI, KEGG, PubChem){
+get_IDs <- function(data, InChIKey, HDMB, ChemSpider, ChEBI, InChI , KEGG, PubChem){
   if(InChIKey){
     data <- data %>%
       mutate(InChIKey = unlist(get_inchis(data)))    #maybe i could add this to preprocessing since it is needed for classification
@@ -94,11 +96,10 @@ get_IDs <- function(data, InChIKey = TRUE, HDMB, ChemSpider, ChEBI, InChI, KEGG,
     data <- data %>%
       mutate(`PubChem CID` = unlist(get_pubchem(data)))
   }
-  
 }
 
 save_ids <- function(data){
-  openxlsx::write.xlsx(data, "annotationsExposome.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(data, "annotationsFooDB5.xlsx", overwrite = TRUE)
 }
 
 
@@ -110,6 +111,7 @@ fobi_met <- function(){
 #classification subfunctions
 
 classifiable <- function(data){
+  data <- data[which(unlist(lapply(data$InChIKey, is.inchikey))),] #can only handle one inchikey string
   data  %>%
     select(biomarker , `InChIKey`) %>%    
     filter(!is.na(InChIKey)) %>%
@@ -163,6 +165,10 @@ class_df <- function(data, out_fobi){
 
 # relationships subfunctions
 annotate_food <- function(data){
+  # if(duplicated(data$ID)){
+  #   data <- data %>%
+  #     mutate(ID = row_number())
+  # }
   data %>%
     select(ID, food) %>%
     fobitools::annotate_foods(similarity = 0.85, reference = fobitools::foods)
@@ -211,7 +217,7 @@ relations_fobi <- function(ass_ann){
 
 
 save_fobi_rel <- function(fobi_rel){
-  openxlsx::write.xlsx(fobi_rel, "relations_fobiExposome.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(fobi_rel, "relations_fobiFooDB5.xlsx", overwrite = TRUE)
 }
 
 
@@ -226,7 +232,7 @@ relations_fobi_new <- function(ass_ann){
 }
 
 save_new_rel <- function(new_rel){
-  openxlsx::write.xlsx(new_rel, "relations_fobi_newExposome.xlsx", overwrite = TRUE)
+  openxlsx::write.xlsx(new_rel, "relations_fobi_newFooDB5.xlsx", overwrite = TRUE)
 }
 
 
@@ -303,7 +309,7 @@ new_merge <- function(rel,ann,class){
 
 
 save <- function(data) {
-  openxlsx::write.xlsx(data, "new_mets_and_relsExposome.xlsx")
+  openxlsx::write.xlsx(data, "new_mets_and_relsFooDB5.xlsx")
 }
 
 
@@ -311,13 +317,13 @@ save <- function(data) {
 
 
 save_data <- function(data) {
-  openxlsx::write.xlsx(data, "composition_data_processedExposome.xlsx")
+  openxlsx::write.xlsx(data, "composition_data_processedFooDB5.xlsx")
 }
 save__new_classes <- function(data){
-  openxlsx::write.xlsx(data, "fobi_new_classesExposome.xlsx")
+  openxlsx::write.xlsx(data, "fobi_new_classesFooDB5.xlsx")
 }
 save_new_classes <- function(data){
-  openxlsx::write.xlsx(data, "fobi_new_met_classesExposome.xlsx")
+  openxlsx::write.xlsx(data, "fobi_new_met_classesFooDB5.xlsx")
 }
 
 

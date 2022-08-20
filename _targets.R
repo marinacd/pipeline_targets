@@ -26,11 +26,11 @@ lapply(list.files("R", full.names = TRUE, recursive = TRUE), source)
 
 # Replace the target list below with your own:
 list(
-tar_target(file, "~/Desktop/TFG/ProtegéPipeline/TEST_27may_Exposome/data/inputs/raw/metabolomic_associations.xlsx", format = "file"),
+tar_target(file, "~/Desktop/TFG/ProtegéPipeline/FooDB/data/associations.xlsx", format = "file"),
   tar_target(dataa, get_data(file)),
   tar_target(data, subset(dataa)),
   tar_target(prep, preprocessing(data, TRUE)),
-  tar_target(ids, get_IDs(prep, TRUE, TRUE,TRUE,TRUE,TRUE,TRUE, TRUE)),
+  tar_target(ids, get_IDs(prep, FALSE, TRUE,TRUE,TRUE,FALSE,TRUE, TRUE)),
   
   tar_target(classes, get_classes(ids)),
   tar_target(foods, annotate_food(prep)),
