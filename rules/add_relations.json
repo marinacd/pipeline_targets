@@ -1,0 +1,1 @@
+{"Collections":[{"sheetName":"Sheet 1","startColumn":"A","endColumn":"D","startRow":"2","endRow":"+","comment":"","rule":"Class: @D* (rdfs:label mm:SkipIfOWLEntityDoesNotExist )\n    SubClassOf: BiomarkerOf some @B*\n    Annotations: InChIKey @E* (rdf:PlainLiteral)","active":true}]}
